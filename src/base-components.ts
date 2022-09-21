@@ -1,16 +1,27 @@
 import { Equals, Param0 } from "tsafe";
-import { Chainable, IPipeIn, IPipeOut, Reduce } from "./global.js";
-import { reduce, reduceSync } from "./reduce.js";
+import {
+  Chainable,
+  HasAsyncInChain,
+  IPipeIn,
+  IPipeInAny,
+  IPipeOut,
+  ReduceAsync,
+  Unpromised,
+} from "./global.js";
+import { reduce } from "./reduce.js";
 import { Emitter } from "../lib/emitter/index.js";
+import { isPromise } from "util/types";
 
 class Pipe<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Arr extends readonly [(ffi: any) => any, ...((dli: any) => any)[]],
   In = Param0<Arr[0]>,
-  Out = Reduce<In, Arr>
-> implements IPipeOut<Out>, IPipeIn<In>
+  Out = ReduceAsync<In, Arr>
+> implements
+    IPipeOut<Unpromised<Out>>,
+    IPipeIn<In, HasAsyncInChain<Arr> extends true ? Promise<Out> : Out>
 {
-  public out: IPipeIn<Out> | null = null;
+  public out: IPipeIn<Unpromised<Out>> | null = null;
   constructor(
     public readonly middlewares: Equals<Arr, Chainable<Arr>> extends true
       ? In extends never
@@ -21,22 +32,20 @@ class Pipe<
       : never
   ) {}
 
-  public async inAsync(x: In): Promise<Out> {
-    const r = (await reduce(x, this.middlewares)) as Out;
-    if (this.out) this.out.in(r);
-    return r;
-  }
-
-  public in(x: In): Out {
-    const r = reduceSync(x, this.middlewares) as Out;
-    if (this.out) this.out.in(r);
-    return r;
+  public in(x: In): HasAsyncInChain<Arr> extends true ? Promise<Out> : Out {
+    const r = reduce(x, this.middlewares);
+    if (isPromise(r)) {
+      r.then((r) => this.out?.in(r as Unpromised<Out>));
+      return r as HasAsyncInChain<Arr> extends true ? Promise<Out> : Out;
+    }
+    this.out?.in(r as Unpromised<Out>);
+    return r as HasAsyncInChain<Arr> extends true ? Promise<Out> : Out;
   }
 }
 
 class Funnel<T> extends Emitter<T> implements IPipeOut<T> {
-  public out: IPipeIn<T> | null = null;
-  constructor(pipe?: IPipeIn<T>) {
+  public out: IPipeInAny<T> | null = null;
+  constructor(pipe?: IPipeInAny<T>) {
     super();
 
     if (pipe) this.out = pipe;

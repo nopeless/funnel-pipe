@@ -57,7 +57,7 @@ type Chainable<Arr extends readonly unknown[]> = Arr extends readonly []
 //   // return reduce<ReturnType<typeof arr[0]>, Tail<R>>(first(v), rest);
 // }
 
-type Reduce<In, Arr> = Arr extends readonly []
+type Reduce<In, Arr extends readonly unknown[]> = Arr extends readonly []
   ? In
   : Arr extends readonly [infer FirstFunc, ...infer R]
   ? FirstFunc extends (x: In) => infer Out
@@ -66,6 +66,16 @@ type Reduce<In, Arr> = Arr extends readonly []
       : Reduce<Out, R>
     : never
   : never;
+
+// type ReduceAsync<In, Arr extends readonly unknown[]> = Arr extends readonly []
+//   ? In
+//   : Arr extends readonly [infer FirstFunc, ...infer R]
+//   ? FirstFunc extends (x: In) => infer Out
+//     ? R extends readonly []
+//       ? Out
+//       : Reduce<Awaited<Out>, R>
+//     : never
+//   : never;
 
 function reduce<In, Arr extends readonly unknown[]>(
   x: In,

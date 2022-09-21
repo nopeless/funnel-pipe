@@ -1,4 +1,4 @@
-import { DPipe, IPipeIn, IPipeOut } from "./global.js";
+import { IPipeIn, IPipeOut } from "./global.js";
 
 class IntervalProducer<T> implements IPipeOut<T> {
   public out: IPipeIn<T> | null = null;
