@@ -1,14 +1,18 @@
 {
-    "name": "unibridge",
-    "version": "1.0.0",
+    "name": "funnel.js",
+    "version": "1.0.1",
     "description": "",
-    "main": "index.js",
+    "main": "dist/src/index.js",
+    "types": "dist/src/index.d.ts",
+    "private": true,
     "directories": {
         "test": "test"
     },
     "scripts": {
         "dev": "echo 'nothing yet'",
-        "test": "cross-env NODE_OPTIONS='--experimental-specifier-resolution=node' NODE_NO_WARNINGS=1 mocha test/**/*.{spec,test}.[jt]s --require test/prelude.js"
+        "test": "cross-env NODE_OPTIONS='--experimental-specifier-resolution=node' NODE_NO_WARNINGS=1 mocha test/**/*.{spec,test}.[jt]s --require test/prelude.js",
+        "build": "tsc -p tsconfig.build.json & npm run _copy-dts",
+        "_copy-dts": "copyfiles \"src/**/*.d.ts\" dist \"lib/**/*.d.ts\" dist"
     },
     "type": "module",
     "keywords": [],
@@ -26,6 +30,7 @@
         "@typescript-eslint/eslint-plugin": "^5.29.0",
         "@typescript-eslint/parser": "^5.29.0",
         "chai": "^4.3.6",
+        "copyfiles": "^2.4.1",
         "eslint": "^8.18.0",
         "eslint-plugin-import": "^2.26.0",
         "eslint-plugin-import-quotes": "^0.0.1",

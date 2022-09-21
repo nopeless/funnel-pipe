@@ -40,9 +40,15 @@ describe(`Functions`, function () {
   describe(`Funnel->Pipe->UFunnel`, function () {
     it(`should pass`, function (callback) {
       const pipe = new Pipe(rearr);
+      expect(pipe.in(1)).to.be.true;
 
       // Automatically type inferred
       const funnel = new Funnel(pipe);
+
+      // Supports deferred type inference
+      funnel.out = pipe;
+      const _funnel = funnel as Funnel<typeof pipe>;
+
       const ufunnel = new UFunnel(pipe);
 
       // Add a listener
@@ -56,6 +62,12 @@ describe(`Functions`, function () {
 
       // You can also call pipes
       expect(pipe.in(1)).to.be.true;
+
+      // Intuitively and by definition, the .out property is equal to the pipe
+      expect(funnel.out).to.equal(pipe);
+
+      // Typescript automatically picks up properties for nested outs
+      expect(funnel.out && funnel.out.out).to.equal(ufunnel);
     });
     it(`should pass (await)`, async function () {
       const pipe = new Pipe(rearrAsync);

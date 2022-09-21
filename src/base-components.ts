@@ -43,9 +43,14 @@ class Pipe<
   }
 }
 
-class Funnel<T> extends Emitter<T> implements IPipeOut<T> {
-  public out: IPipeInAny<T> | null = null;
-  constructor(pipe?: IPipeInAny<T>) {
+type GetIn<P> = P extends IPipeIn<infer In, infer _> ? In : never;
+
+class Funnel<P extends IPipeInAny<unknown>, T = GetIn<P>>
+  extends Emitter<T>
+  implements IPipeOut<T>
+{
+  public out: P | null = null;
+  constructor(pipe?: P) {
     super();
 
     if (pipe) this.out = pipe;

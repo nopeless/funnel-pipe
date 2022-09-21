@@ -72,7 +72,14 @@ module.exports = {
         exports: `always-multiline`,
       },
     ],
-    "@typescript-eslint/no-unused-vars": [`warn`, { argsIgnorePattern: `^_` }],
+    "@typescript-eslint/no-unused-vars": [
+      `warn`,
+      {
+        argsIgnorePattern: `^_`,
+        varsIgnorePattern: `^_`,
+        caughtErrorsIgnorePattern: `^_`,
+      },
+    ],
     "no-trailing-spaces": `error`,
     "space-infix-ops": [`error`, { int32Hint: false }],
     "eol-last": [`error`, `always`],

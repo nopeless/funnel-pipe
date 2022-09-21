@@ -35,7 +35,9 @@
         "esm": true
     },
     "include": [
+        "./lib/**/*.ts",
         "./src/**/*.ts",
+        "./src/global.d.ts",
         "./test/**/*.ts",
     ],
     "exclude": [
