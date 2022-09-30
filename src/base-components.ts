@@ -3,8 +3,8 @@ import {
   Chainable,
   HasAsyncInChain,
   IPipeIn,
-  IPipeInAny,
   IPipeOut,
+  MaybePromise,
   ReduceAsync,
   Unpromised,
 } from "./global.js";
@@ -12,16 +12,19 @@ import { reduce } from "./reduce.js";
 import { Emitter } from "../lib/emitter/index.js";
 import { isPromise } from "util/types";
 
+interface IPipe<In, Out, OutOfIn = MaybePromise<Out>>
+  extends IPipeIn<In, OutOfIn>,
+    IPipeOut<Unpromised<Out> | Out> {}
+
 class Pipe<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Arr extends readonly [(ffi: any) => any, ...((dli: any) => any)[]],
   In = Param0<Arr[0]>,
   Out = ReduceAsync<In, Arr>
 > implements
-    IPipeOut<Unpromised<Out>>,
-    IPipeIn<In, HasAsyncInChain<Arr> extends true ? Promise<Out> : Out>
+    IPipe<In, Out, HasAsyncInChain<Arr> extends true ? Promise<Out> : Out>
 {
-  public out: IPipeIn<Unpromised<Out>> | null = null;
+  public out: IPipeIn<Unpromised<Out> | Out> | null = null;
   constructor(
     public readonly middlewares: Equals<Arr, Chainable<Arr>> extends true
       ? In extends never
@@ -45,7 +48,8 @@ class Pipe<
 
 type GetIn<P> = P extends IPipeIn<infer In, infer _> ? In : never;
 
-class Funnel<P extends IPipeInAny<unknown>, T = GetIn<P>>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+class Funnel<P extends IPipeIn<unknown, any>, T = GetIn<P>>
   extends Emitter<T>
   implements IPipeOut<T>
 {
@@ -75,4 +79,4 @@ class UFunnel<T> extends Emitter<T> implements IPipeIn<T> {
   }
 }
 
-export { Pipe, Funnel, UFunnel };
+export { IPipe, Pipe, Funnel, UFunnel };

@@ -12,7 +12,7 @@ import { Equals } from "tsafe";
 
 type Unpromised<T> = T extends Promise<infer U> ? Unpromised<U> : T;
 
-// type DualPromise<T> = T | Promise<T>;
+type MaybePromise<T> = T | Promise<T>;
 
 // type j = DualPromise<number>;
 // type k = Unpromised<j>;
@@ -54,12 +54,7 @@ interface IPipeIn<T, U = T> {
    * @returns The final processed value corresponding to the piped in value.
    * Return null if it is undeterministic
    */
-  in(x: T): null | U;
-}
-
-interface IPipeInAny<T> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  in(x: T): any;
+  in(x: T): void | U;
 }
 
 interface IPipeOut<U> {
