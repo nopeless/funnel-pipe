@@ -3,6 +3,7 @@
         "types": [
             "node",
             "chai",
+            "chai-spies",
             "mocha"
         ],
         "lib": [
