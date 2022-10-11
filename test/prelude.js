@@ -1,3 +1,7 @@
-import { expect } from "chai";
+import chai from "chai";
+import spies from "chai-spies";
 
-global.expect = expect;
+chai.use(spies);
+
+global.chai = chai;
+global.expect = chai.expect;

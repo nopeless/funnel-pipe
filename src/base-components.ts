@@ -1,57 +1,77 @@
-import { Equals, Param0 } from "tsafe";
-import {
-  Chainable,
-  HasAsyncInChain,
-  IPipeIn,
-  IPipeOut,
-  MaybePromise,
-  ReduceAsync,
-  Unpromised,
-} from "./global.js";
 import { reduce } from "./reduce.js";
 import { Emitter } from "../lib/emitter/index.js";
-import { isPromise } from "util/types";
+import { isPromise, EitherFactory, then } from "./util.js";
 
-interface IPipe<In, Out, OutOfIn = MaybePromise<Out>>
-  extends IPipeIn<In, OutOfIn>,
-    IPipeOut<Unpromised<Out> | Out> {}
+const PROCESSORS = Symbol(`funnel.js:processors`);
+
+interface Monad {
+  [PROCESSORS]?: Processors;
+}
+
+interface IPipe<In = unknown, Out = unknown, ReturnOfIn = Out | Promise<Out>>
+  extends IPipeIn<In, ReturnOfIn>,
+    IPipeOut<Out> {}
+
+type __Out<Arr extends readonly Fn[]> = Monad &
+  Exclude<Awaited<Reduce<Param0<Arr[0]>, Arr>>, undefined>;
 
 class Pipe<
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Arr extends readonly [(ffi: any) => any, ...((dli: any) => any)[]],
-  In = Param0<Arr[0]>,
-  Out = ReduceAsync<In, Arr>
-> implements
-    IPipe<In, Out, HasAsyncInChain<Arr> extends true ? Promise<Out> : Out>
+  Arr extends readonly Fn[],
+  // Used for more type inference if the user wants
+  OutPipe extends IPipeIn<__Out<Arr>> = IPipeIn<__Out<Arr>>
+> implements IPipe<Param0<Arr[0]>, __Out<Arr>, Reduce<Param0<Arr[0]>, Arr>>
 {
-  public out: IPipeIn<Unpromised<Out> | Out> | null = null;
-  constructor(
-    public readonly middlewares: Equals<Arr, Chainable<Arr>> extends true
-      ? In extends never
-        ? never
-        : Out extends never
-        ? never
-        : Arr
-      : never
-  ) {}
+  public name = `Anonymous Pipe`;
+  public out: OutPipe | null = null;
 
-  public in(x: In): HasAsyncInChain<Arr> extends true ? Promise<Out> : Out {
-    const r = reduce(x, this.middlewares);
-    if (isPromise(r)) {
-      r.then((r) => this.out?.in(r as Unpromised<Out>));
-      return r as HasAsyncInChain<Arr> extends true ? Promise<Out> : Out;
-    }
-    this.out?.in(r as Unpromised<Out>);
-    return r as HasAsyncInChain<Arr> extends true ? Promise<Out> : Out;
+  constructor(public transducers: ValidateTransducers2<Arr>, name?: string) {
+    if (name) this.name = name;
+  }
+
+  /**
+   * Returns #in() method but bound to this instance
+   */
+  public get fn() {
+    return this.in.bind(this);
+  }
+
+  public in(x: Param0<Arr[0]> & Monad): Reduce<Param0<Arr[0]>, Arr> {
+    // TODO fix this later
+    const r = EitherFactory(reduce)(x, this.transducers as never);
+    return then(
+      // Make monad
+      r,
+      // Handle
+      ([_res, rej]) => {
+        const res = _res as __Out<Arr>;
+        if (rej === undefined) {
+          this.out?.in(res);
+          return res;
+        }
+        throw rej;
+      }
+    ) as Reduce<Param0<Arr[0]>, Arr>;
+  }
+
+  static Fn<F extends Fn>(fn: F, name?: string) {
+    // TODO I have no idea why this won't work here
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return new Pipe<readonly [F]>([fn] as any, name);
   }
 }
 
-type GetIn<P> = P extends IPipeIn<infer In, infer _> ? In : never;
+class BasePipe<In, Out = In> extends Pipe<[(x: In) => Out]> {
+  constructor(...args: ConstructorParameters<typeof Pipe<[(x: In) => Out]>>) {
+    super(...args);
+  }
+}
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-class Funnel<P extends IPipeIn<unknown, any>, T = GetIn<P>>
-  extends Emitter<T>
-  implements IPipeOut<T>
+type __IPipeIn__T<P> = P extends IPipeIn<infer T, unknown> ? T : never;
+type __IPipeOut__T<P> = P extends IPipeOut<infer T> ? T : never;
+
+class Funnel<P extends IPipeIn<unknown>>
+  extends Emitter<__IPipeIn__T<P>>
+  implements IPipeOut<__IPipeIn__T<P>>
 {
   public out: P | null = null;
   constructor(pipe?: P) {
@@ -65,18 +85,31 @@ class Funnel<P extends IPipeIn<unknown, any>, T = GetIn<P>>
   }
 }
 
-class UFunnel<T> extends Emitter<T> implements IPipeIn<T> {
-  constructor(pipe?: IPipeOut<T>) {
+class UFunnel<P extends IPipeOut<unknown>>
+  extends Emitter<__IPipeOut__T<P>>
+  implements IPipeIn<__IPipeOut__T<P>>
+{
+  // public out: P | null = null;
+  constructor(pipe?: P) {
     super();
 
     if (pipe) pipe.out = this;
 
     this.in = this.in.bind(this);
   }
-  public in(arg: T): T {
+  public in(arg: __IPipeOut__T<P>): __IPipeOut__T<P> {
     this.emit(arg);
     return arg;
   }
 }
 
-export { IPipe, Pipe, Funnel, UFunnel };
+export {
+  IPipe,
+  Pipe,
+  // ErrorPipe,
+  // CatchPipe,
+  BasePipe,
+  Funnel,
+  UFunnel,
+  PROCESSORS,
+};

@@ -1,4 +1,13 @@
-import { reduce, Funnel, UFunnel, Pipe } from "../src/index.js";
+import {
+  reduce,
+  Funnel,
+  UFunnel,
+  Pipe,
+  // ErrorPipe,
+  // CatchPipe,
+  // PROCESSORS,
+} from "../src/index.js";
+import { Message } from "./fixtures/monads.js";
 
 const rearr = [
   (x: number) => x === 1,
@@ -13,6 +22,29 @@ const rearrAsync = [
   async (x: number) => (x === 3 ? `` : `false`),
   async (x: string) => x.length === 0,
 ] as const;
+
+describe(`main example`, function () {
+  it(`should work`, async function () {
+    const d = [
+      async (x: number) => (x === 1 ? `` : false),
+      (x: boolean | string) => (x ? 1 : 0) + 2,
+      async (x: number) => (x === 3 ? `` : `false`),
+      (x: string) => x.length === 0,
+    ] as const;
+    const pipe = new Pipe(d);
+
+    const res = pipe.in(3);
+    typeof res; // Promise
+    const resolved = await res;
+    typeof resolved;
+
+    const pipe1 = Pipe.Fn((x: number) => x);
+
+    type j = typeof pipe1 extends Pipe<infer R> ? R[0] : never;
+
+    pipe1.in(1);
+  });
+});
 
 describe(`Functions`, function () {
   describe(`reduce (sync)`, function () {
@@ -45,11 +77,9 @@ describe(`Functions`, function () {
       // Automatically type inferred
       const funnel = new Funnel(pipe);
 
-      // Supports deferred type inference
-      funnel.out = pipe;
-      const _funnel = funnel as Funnel<typeof pipe>;
-
       const ufunnel = new UFunnel(pipe);
+
+      pipe.out = ufunnel;
 
       // Add a listener
       ufunnel.once((x) => {
@@ -97,4 +127,162 @@ describe(`Functions`, function () {
       ]);
     });
   });
+  /*
+  describe(`ErrorPipe`, function () {
+    it(`instanciate with array`, function () {
+      const spy = chai.spy((_e: Error) => 0);
+
+      const e = new Error(`error`);
+
+      const epipe = new ErrorPipe(
+        [
+          (x: number) => x === 1,
+          (x: boolean) => {
+            if (x) {
+              throw e;
+            }
+            return 3;
+          },
+        ] as const,
+        42
+      );
+
+      expect(epipe.in(2)).to.equal(3);
+      epipe.error = Pipe.Fn(spy);
+      expect(epipe.in(1)).to.equal(42);
+      expect(spy).to.have.been.called.with(e);
+    });
+    it(`instanciate with pipe`, function () {
+      const spy = chai.spy((_e: Error) => 0);
+
+      const e = new Error(`error`);
+
+      const epipe = new ErrorPipe(
+        new Pipe([
+          (x: number) => x === 1,
+          (x: boolean) => {
+            if (x) {
+              throw e;
+            }
+            return 3;
+          },
+        ] as const),
+        42
+      );
+
+      expect(epipe.in(2)).to.equal(3);
+      epipe.error = Pipe.Fn(spy);
+      expect(epipe.in(1)).to.equal(42);
+      expect(spy).to.have.been.called.with(e);
+    });
+  });
+  describe(`CatchPipe`, function () {
+    it(`instanciate with array`, function () {
+      const spy = chai.spy((ee: Error) => {
+        if (ee === e) {
+          return `ok`;
+        }
+        return `not ok`;
+      });
+
+      const e = new Error(`error`);
+
+      const epipe = new CatchPipe(
+        [
+          (x: number) => x + 1,
+          (x: number) => {
+            if (x === 1) {
+              throw e;
+            } else if (x === 2) {
+              throw new Error(`unknown error`);
+            }
+            return `final`;
+          },
+        ] as const,
+        spy
+      );
+
+      expect(epipe.in(2)).to.equal(`final`);
+      expect(epipe.in(1)).to.equal(`not ok`);
+      expect(epipe.in(0)).to.equal(`ok`);
+      expect(spy).to.have.been.called.with(e);
+    });
+    it(`instanciate with pipe`, function () {
+      const spy = chai.spy((ee: Error) => {
+        if (ee === e) {
+          return `ok`;
+        }
+        return `not ok`;
+      });
+
+      const e = new Error(`error`);
+
+      const epipe = new CatchPipe(
+        new Pipe([
+          (x: number) => x + 1,
+          (x: number) => {
+            if (x === 1) {
+              throw e;
+            } else if (x === 2) {
+              throw new Error(`unknown error`);
+            }
+            return `final`;
+          },
+        ] as const),
+        spy
+      );
+
+      expect(epipe.in(2)).to.equal(`final`);
+      expect(epipe.in(1)).to.equal(`not ok`);
+      expect(epipe.in(0)).to.equal(`ok`);
+      expect(spy).to.have.been.called.with(e);
+    });
+  });
+  describe(`Monad processing logging`, function () {
+    it(`should work`, function () {
+      const input = new Message(`You suck`);
+
+      const trollPipe = new Pipe(
+        [
+          Pipe.Fn((m: Message) => {
+            m.message = m.message.toUpperCase();
+            return m;
+          }, `UpperCase`).fn,
+          Pipe.Fn((m: Message) => {
+            m.message = `${m.message}!!!`;
+            return m;
+          }, `Shout!`).fn,
+        ] as const,
+        `trollPipe`
+      );
+
+      const addDisclaimer = new Pipe(
+        [
+          Pipe.Fn((m: Message) => {
+            m.message = `<The following is a prank> ${m.message}`;
+            return m;
+          }, `Add fancy flairs`).fn,
+          Pipe.Fn((m: Message) => {
+            m.message = `${m.message} (JK its just a prank)`;
+            return m;
+          }, `Say its a prank`).fn,
+        ] as const,
+        `Add disclaimer`
+      );
+
+      const troll = new Pipe(
+        [trollPipe.fn, addDisclaimer.fn] as const,
+        `You've been trolled`
+      );
+
+      const res = troll.in(input);
+
+      expect(res.message).to.equal(
+        `<The following is a prank> YOU SUCK!!! (JK its just a prank)`
+      );
+
+      console.log((res as any)[PROCESSORS]);
+    });
+  });
+  */
 });
