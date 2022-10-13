@@ -42,33 +42,11 @@ describe(`main example`, function () {
 
     type j = typeof pipe1 extends Pipe<infer R> ? R[0] : never;
 
-    pipe1.in(1);
+    expect(pipe1.in(1)).to.equal(1);
   });
 });
 
-describe(`Functions`, function () {
-  describe(`reduce (sync)`, function () {
-    it(`should pass`, function () {
-      const r = reduce(1, rearr);
-
-      expect(r).to.be.true;
-    });
-  });
-  describe(`reduce (async)`, function () {
-    it(`should pass (await)`, async function () {
-      const r = await reduce(1, rearrAsync);
-
-      expect(r).to.be.true;
-    });
-    it(`should pass (then callback)`, function (cb) {
-      const r = reduce(1, rearrAsync);
-
-      r.then((v) => {
-        expect(v).to.be.true;
-        cb();
-      });
-    });
-  });
+describe(`Library`, function () {
   describe(`Funnel->Pipe->UFunnel`, function () {
     it(`should pass`, function (callback) {
       const pipe = new Pipe(rearr);

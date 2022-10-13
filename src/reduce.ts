@@ -8,7 +8,7 @@ function reduce<Arr extends readonly Fn[]>(
   arr: ValidateTransducers<Arr>
 ): Reduce<Param0<Arr[0]>, Arr> {
   if (arr.length === 0) return x;
-  const [f, ..._r] = arr;
+  const [f, ..._r] = arr as readonly [...ValidateTransducers<Arr>];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const r = _r as any;
   const y = (f as Arr[0])(x) as ReturnType<Arr[0]>;

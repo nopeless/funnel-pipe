@@ -1,9 +1,11 @@
 type NeverVoid<T> = isVoid<T> extends true ? never : any;
 
-type Fn = (x: never) => unknown;
+type Fn = (...args: never[]) => unknown;
 
-type isAsync<T> = T extends (...args: any) => Promise<any> ? true : false;
-type isPromise<T> = T extends Promise<any> ? true : false;
+type isAsync<T> = T extends (...args: never[]) => Promise<unknown>
+  ? true
+  : false;
+type isPromise<T> = T extends Promise<unknown> ? true : false;
 type isVoid<T> = T extends void ? true : false;
 type isNever<T> = [T] extends [never] ? true : false;
 
@@ -22,10 +24,10 @@ type Reduce<In, Arr extends readonly Fn[]> = Arr extends readonly []
   ? In
   : Arr extends readonly [infer F extends Fn, ...infer R extends Fn[]]
   ? F extends (x: In) => unknown
-    ? isAsync<F> extends true
-      ? Reduce<Awaited<ReturnType<F>>, R> extends Promise<unknown>
-        ? Reduce<Awaited<ReturnType<F>>, R>
-        : Promise<Reduce<Awaited<ReturnType<F>>, R>>
+    ? // For some reason, you have to use ReturnType here
+      // Or else the type inference does not work
+      ReturnType<F> extends Promise<infer AwaitedRet>
+      ? Promise<Awaited<Reduce<AwaitedRet, R>>>
       : Reduce<ReturnType<F>, R>
     : never
   : Arr extends Array<infer F extends Fn>
@@ -51,28 +53,6 @@ type ValidateTransducers<
     : Array<(x: In) => In>
   : never;
 
-type InFT<T> = (x: T) => unknown;
-type InFTT<T> = (x: T) => T;
-
-type ValidateTransducers2<
-  Arr extends readonly Fn[],
-  InF extends (x: Param0<Arr[0]>) => unknown = (x: Param0<Arr[0]>) => unknown
-> = Arr extends readonly []
-  ? Arr
-  : Arr extends readonly [infer F extends Fn, ...infer R extends readonly Fn[]]
-  ? F extends InF
-    ? R extends ValidateTransducers2<R, (x: Awaited<ReturnType<F>>) => unknown>
-      ? Arr
-      : readonly [
-          F,
-          ...ValidateTransducers2<R, (x: Awaited<ReturnType<F>>) => unknown>
-        ]
-    : readonly [InF & (() => ReturnType<F>), ...R]
-  : Arr extends Array<infer F extends Fn>
-  ? F extends InF & (() => Param0<Arr[number]>)
-    ? Arr
-    : Array<InF & (() => Param0<F>)>
-  : never;
 /**
  * T and U are not Promises
  */

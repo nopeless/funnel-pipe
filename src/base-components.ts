@@ -24,7 +24,7 @@ class Pipe<
   public name = `Anonymous Pipe`;
   public out: OutPipe | null = null;
 
-  constructor(public transducers: ValidateTransducers2<Arr>, name?: string) {
+  constructor(public transducers: ValidateTransducers<Arr>, name?: string) {
     if (name) this.name = name;
   }
 
@@ -36,8 +36,7 @@ class Pipe<
   }
 
   public in(x: Param0<Arr[0]> & Monad): Reduce<Param0<Arr[0]>, Arr> {
-    // TODO fix this later
-    const r = EitherFactory(reduce)(x, this.transducers as never);
+    const r = EitherFactory(reduce<Arr>)(x, this.transducers);
     return then(
       // Make monad
       r,
@@ -54,9 +53,10 @@ class Pipe<
   }
 
   static Fn<F extends Fn>(fn: F, name?: string) {
+    type j = F;
     // TODO I have no idea why this won't work here
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return new Pipe<readonly [F]>([fn] as any, name);
+    return new Pipe<readonly [F]>([fn] as const, name);
   }
 }
 
