@@ -59,7 +59,8 @@ module.exports = {
 
     "linebreak-style": [`error`, `unix`],
     semi: [`error`, `always`],
-    quotes: [`error`, `backtick`],
+    quotes: [`off`],
+    "@typescript-eslint/quotes": [`error`, `backtick`],
     indent: [`off`],
     "quote-props": [`error`, `as-needed`],
     strict: 0,
