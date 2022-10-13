@@ -23,10 +23,10 @@
     "baseUrl": ".",
     "paths": {
       "src": [
-        "src"
+        "src/*"
       ],
       "lib": [
-        "lib"
+        "lib/*"
       ]
     },
     "noErrorTruncation": true
